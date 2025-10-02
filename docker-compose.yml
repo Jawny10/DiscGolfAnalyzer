@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - ML_SERVICE_URL=http://ml-service:5000
+    depends_on:
+      - ml-service
+    volumes:
+      - ./uploads:/app/uploads
+
+  ml-service:
+    build: ./ml-service
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./uploads:/app/uploads
