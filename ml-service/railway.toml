@@ -1,0 +1,12 @@
+# Railway configuration for the Python ML service
+# Handles video analysis and pose detection
+
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3

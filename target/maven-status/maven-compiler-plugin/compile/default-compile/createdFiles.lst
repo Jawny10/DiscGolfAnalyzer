@@ -1,0 +1,15 @@
+com/discgolfanalyzer/controller/ThrowAnalysisController.class
+com/discgolfanalyzer/DiscGolfAnalyzerApplication.class
+com/discgolfanalyzer/model/AppUser.class
+com/discgolfanalyzer/service/video/VideoProcessingService$1.class
+com/discgolfanalyzer/dto/AnalysisResult.class
+com/discgolfanalyzer/repository/ThrowAnalysisRepository.class
+com/discgolfanalyzer/model/ThrowAnalysis.class
+com/discgolfanalyzer/controller/UserController.class
+com/discgolfanalyzer/config/SecurityConfig.class
+com/discgolfanalyzer/service/video/VideoProcessingService.class
+com/discgolfanalyzer/service/FrameExtractor.class
+com/discgolfanalyzer/repository/UserRepository.class
+com/discgolfanalyzer/dto/AnalyzeRequest.class
+com/discgolfanalyzer/service/OpenAiVisionService.class
+com/discgolfanalyzer/service/FrameExtractor$Frames.class

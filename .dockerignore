@@ -1,0 +1,48 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.iml
+
+# Build artifacts
+target/
+*.jar
+*.class
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+venv/
+.venv/
+*_env/
+
+# Data files
+data/
+data-collection/
+*.mp4
+*.mov
+*.mkv
+
+# Docs
+docs/
+*.md
+!README.md
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# ML models (large files)
+*.pt
+*.pth
+*.onnx
+*.pkl

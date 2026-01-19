@@ -1,21 +1,54 @@
 version: '3.8'
 
 services:
-  backend:
-    build: .
+  # Java Spring Boot API
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "8080:8080"
     environment:
-      - SPRING_PROFILES_ACTIVE=dev
-      - ML_SERVICE_URL=http://ml-service:5000
+      - ML_SERVICE_URL=http://ml-service:5001
+      - ANTHROPIC_ENABLED=false
+      - H2_CONSOLE_ENABLED=true
     depends_on:
-      - ml-service
-    volumes:
-      - ./uploads:/app/uploads
+      ml-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/throws/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
+  # Python ML Service
   ml-service:
-    build: ./ml-service
+    build:
+      context: ./ml-service
+      dockerfile: Dockerfile
     ports:
-      - "5000:5000"
-    volumes:
-      - ./uploads:/app/uploads
+      - "5001:5001"
+    environment:
+      - FLASK_ENV=development
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5001/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+# Optional: Add PostgreSQL for production-like local testing
+#  postgres:
+#    image: postgres:15-alpine
+#    environment:
+#      POSTGRES_DB: discgolf
+#      POSTGRES_USER: discgolf
+#      POSTGRES_PASSWORD: discgolf
+#    ports:
+#      - "5432:5432"
+#    volumes:
+#      - postgres_data:/var/lib/postgresql/data
+
+#volumes:
+#  postgres_data:

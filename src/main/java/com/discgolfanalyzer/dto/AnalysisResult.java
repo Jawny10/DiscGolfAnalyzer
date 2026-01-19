@@ -1,26 +1,32 @@
 package com.discgolfanalyzer.dto;
 
+import java.util.Collections;
 import java.util.List;
 
 public class AnalysisResult {
     private String summary;
-    private Double releaseSpeedMph;
-    private List<String> techniqueFeedback;
+    private Double score;
+    private List<String> tips;
 
-    public AnalysisResult() {}
+    public AnalysisResult() { }
 
-    public AnalysisResult(String summary, Double releaseSpeedMph, List<String> techniqueFeedback) {
+    public AnalysisResult(String summary, Double score, List<String> tips) {
         this.summary = summary;
-        this.releaseSpeedMph = releaseSpeedMph;
-        this.techniqueFeedback = techniqueFeedback;
+        this.score = score;
+        this.tips = tips;
+    }
+
+    // Convenience 1-arg ctor used by controller
+    public AnalysisResult(String summary) {
+        this(summary, null, Collections.emptyList());
     }
 
     public String getSummary() { return summary; }
     public void setSummary(String summary) { this.summary = summary; }
 
-    public Double getReleaseSpeedMph() { return releaseSpeedMph; }
-    public void setReleaseSpeedMph(Double releaseSpeedMph) { this.releaseSpeedMph = releaseSpeedMph; }
+    public Double getScore() { return score; }
+    public void setScore(Double score) { this.score = score; }
 
-    public List<String> getTechniqueFeedback() { return techniqueFeedback; }
-    public void setTechniqueFeedback(List<String> techniqueFeedback) { this.techniqueFeedback = techniqueFeedback; }
+    public List<String> getTips() { return tips; }
+    public void setTips(List<String> tips) { this.tips = tips; }
 }

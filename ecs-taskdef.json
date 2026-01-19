@@ -1,0 +1,56 @@
+{
+  "family": "discgolf-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::473276952772:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::473276952772:role/discgolftaskrole",
+  "containerDefinitions": [
+    {
+      "name": "ml",
+      "image": "473276952772.dkr.ecr.us-east-1.amazonaws.com/discgolf-ml:latest",
+      "essential": true,
+      "portMappings": [ { "containerPort": 5001, "hostPort": 5001, "protocol": "tcp" } ],
+      "secrets": [
+        {
+          "name": "OPENAI_API_KEY",
+          "valueFrom": "arn:aws:ssm:us-east-1:473276952772:parameter/discgolf/OPENAI_API_KEY"
+        }
+      ],
+      "environment": [
+        { "name": "AUTH_TOKEN", "value": "devtoken123" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/discgolf-ml",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    },
+    {
+      "name": "spring",
+      "image": "473276952772.dkr.ecr.us-east-1.amazonaws.com/discgolf-spring:latest",
+      "essential": true,
+      "portMappings": [ { "containerPort": 8080, "hostPort": 8080, "protocol": "tcp" } ],
+      "environment": [
+        {
+          "name": "SPRING_APPLICATION_JSON",
+          "value": "{\"ml\":{\"service\":{\"url\":\"http://172.31.59.147:5001\"}}}"
+        }
+      ],
+      "dependsOn": [ { "containerName": "ml", "condition": "START" } ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/discgolf-spring",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ],
+  "runtimePlatform": { "cpuArchitecture": "X86_64", "operatingSystemFamily": "LINUX" }
+}

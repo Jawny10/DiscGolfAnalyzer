@@ -1,72 +1,106 @@
 package com.discgolfanalyzer.controller;
 
-import com.discgolfanalyzer.dto.AnalysisResult;
-import com.discgolfanalyzer.service.OpenAiVisionService;
+import com.discgolfanalyzer.dto.EnhancedAnalysisResult;
+import com.discgolfanalyzer.model.AppUser;
+import com.discgolfanalyzer.model.ThrowAnalysis;
+import com.discgolfanalyzer.repository.UserRepository;
+import com.discgolfanalyzer.service.AnthropicVisionService;
+import com.discgolfanalyzer.service.video.VideoProcessingService;
+import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/throws")
+@RequiredArgsConstructor
 public class ThrowAnalysisController {
 
-    private final OpenAiVisionService visionService;
+    private static final Logger log = LoggerFactory.getLogger(ThrowAnalysisController.class);
 
-    @Autowired
-    public ThrowAnalysisController(OpenAiVisionService visionService) {
-        this.visionService = visionService;
+    private final VideoProcessingService videoProcessingService;
+    private final UserRepository userRepository;
+
+    // Optional - only injected if anthropic.enabled=true
+    @Autowired(required = false)
+    private AnthropicVisionService anthropicVisionService;
+
+    @GetMapping("/health")
+    public ResponseEntity<String> health() {
+        return ResponseEntity.ok("OK");
+    }
+
+    @PostMapping(value = "/analyze", consumes = {"multipart/form-data"})
+    public ResponseEntity<ThrowAnalysis> analyze(
+            @RequestPart("video") MultipartFile video,
+            @RequestParam(name = "fps", required = false) Double fps,
+            @RequestParam(name = "maxSeconds", required = false) Integer maxSeconds,
+            @RequestParam(name = "hfovDeg", required = false) Double hfovDeg,
+            @RequestParam(name = "distanceMeters", required = false) Double distanceMeters,
+            @AuthenticationPrincipal AppUser authedUser // if you aren’t using Spring Security auth yet, replace with a lookup or stub
+    ) throws Exception {
+
+        // If you don’t have auth wired, you can stub a user for now:
+        AppUser user = authedUser != null ? authedUser : userRepository.findAll().stream().findFirst().orElseGet(() -> {
+            AppUser u = new AppUser();
+            u.setUsername("demo");
+            u.setEmail("demo@example.com");
+            return userRepository.save(u);
+        });
+
+        log.info("Analyze called: fps={}, maxSeconds={}, hfovDeg={}, distanceMeters={}", fps, maxSeconds, hfovDeg, distanceMeters);
+
+        ThrowAnalysis result = videoProcessingService.processVideo(
+                video,
+                user,
+                fps,
+                maxSeconds,
+                hfovDeg,
+                distanceMeters
+        );
+
+        return ResponseEntity.ok(result);
     }
 
     /**
-     * Upload a video and analyze the throw.
+     * Enhanced analysis endpoint with pose detection and optional AI enhancement.
+     *
+     * Uses MediaPipe for pose extraction and biomechanics analysis.
+     * Optionally enhances feedback with Anthropic Claude if enabled.
+     *
+     * @param video The video file to analyze
+     * @param handedness Player's throwing hand ("right" or "left")
+     * @param skillLevel Player's skill level ("beginner", "intermediate", "advanced")
+     * @return Enhanced analysis with trajectory, pose metrics, and coaching feedback
      */
-    @PostMapping(value = "/analyze", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<AnalysisResult> analyzeThrowFromVideo(
-            @RequestParam("video") MultipartFile videoFile,
-            @RequestParam(value = "fps", defaultValue = "3.0") double fps,
-            @RequestParam(value = "maxSeconds", defaultValue = "5") int maxSeconds,
-            @RequestParam(value = "hfovDeg", required = false) Double hfovDeg,
-            @RequestParam(value = "distanceMeters", required = false) Double distanceMeters
-    ) {
-        try {
-            // Save uploaded video temporarily
-            File tempVideo = File.createTempFile("upload-", ".mp4");
-            videoFile.transferTo(tempVideo);
+    @PostMapping(value = "/analyze-enhanced", consumes = {"multipart/form-data"})
+    public ResponseEntity<EnhancedAnalysisResult> analyzeEnhanced(
+            @RequestPart("video") MultipartFile video,
+            @RequestParam(name = "handedness", required = false, defaultValue = "right") String handedness,
+            @RequestParam(name = "skillLevel", required = false, defaultValue = "intermediate") String skillLevel
+    ) throws Exception {
 
-            // TODO: implement frame extraction with OpenCV or ffmpeg
-            // For now, assume you extracted frames into a list of Paths
-            List<Path> frames = extractDummyFrames(tempVideo.toPath());
+        log.info("Enhanced analyze called: handedness={}, skillLevel={}", handedness, skillLevel);
 
-            // Call vision service
-            AnalysisResult result = visionService.analyzeFrames(
-                    frames,
-                    fps,
-                    maxSeconds,
-                    hfovDeg,
-                    distanceMeters
-            );
+        // Call the enhanced processing pipeline
+        EnhancedAnalysisResult result = videoProcessingService.processVideoEnhanced(
+                video,
+                handedness,
+                skillLevel
+        );
 
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.internalServerError()
-                    .body(new AnalysisResult("Error analyzing throw: " + e.getMessage()));
+        // Optionally enhance with AI (Claude) if available
+        if (anthropicVisionService != null) {
+            log.info("Enhancing analysis with Anthropic Claude");
+            result = anthropicVisionService.enhanceWithAI(result);
+        } else {
+            log.debug("Anthropic service not enabled, skipping AI enhancement");
         }
-    }
 
-    /**
-     * Example dummy frame extractor. Replace with real OpenCV/ffmpeg.
-     */
-    private List<Path> extractDummyFrames(Path videoPath) throws IOException {
-        // In a real implementation: extract frames -> write temp PNGs -> return Paths
-        return new ArrayList<>(); // return empty for now
+        return ResponseEntity.ok(result);
     }
 }

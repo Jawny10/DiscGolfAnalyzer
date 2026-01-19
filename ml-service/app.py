@@ -7,10 +7,11 @@ import logging
 import traceback
 import time
 
-#INSERT INTO app_users (username, email, password) VALUES ('testuser', 'test@example.com', '$2a$10$h.dl5J86rGH7I8bD9bZeZe');
+# Pose analysis module
+from pose import MediaPipePoseExtractor, BiomechanicsAnalyzer, FeedbackGenerator
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, 
+logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger('ml-service')
 
@@ -252,7 +253,7 @@ def generate_simple_feedback(trajectory_data):
     Generate simple feedback based on trajectory analysis.
     """
     feedback = []
-    
+
     # Flight path feedback
     flight_path = trajectory_data["flight_path"]
     if flight_path == "flat":
@@ -261,7 +262,7 @@ def generate_simple_feedback(trajectory_data):
         feedback.append("Your throw has a hyzer angle (disc tilted down). This is good for controlled fades.")
     elif flight_path == "anhyzer":
         feedback.append("Your throw has an anhyzer angle (disc tilted up). This can help with distance but may reduce control.")
-    
+
     # Release angle feedback
     release_angle = trajectory_data["release_angle"]
     if abs(release_angle) < 5:
@@ -270,11 +271,178 @@ def generate_simple_feedback(trajectory_data):
         feedback.append("Your release angle is quite steep. Try flattening your release for more distance.")
     elif release_angle < -20:
         feedback.append("Your anhyzer angle is quite extreme. Consider a more moderate angle for better control.")
-    
+
     # Add a general placeholder feedback
     feedback.append("Focus on a smooth release and follow-through to improve consistency.")
-    
+
     return feedback
+
+
+@app.route('/analyze-pose', methods=['POST'])
+def analyze_pose():
+    """
+    Analyze video with combined trajectory and pose detection.
+
+    Returns comprehensive analysis including:
+    - Disc trajectory data (flight path, distance, etc.)
+    - Pose metrics (reachback, hip rotation, etc.)
+    - Combined feedback from both analyses
+    """
+    start_time = time.time()
+    logger.info("Received analyze-pose request")
+
+    temp_dir = None
+    video_path = None
+    pose_extractor = None
+
+    try:
+        if 'video' not in request.files:
+            logger.error("No video file in request")
+            return jsonify({"error": "No video file provided"}), 400
+
+        video_file = request.files['video']
+        logger.info(f"Received video file: {video_file.filename}")
+
+        # Get optional parameters
+        min_confidence = float(request.form.get('min_confidence', 0.5))
+        handedness = request.form.get('handedness', 'right')
+        skill_level = request.form.get('skill_level', 'intermediate')
+
+        # Create temporary directory and save video
+        temp_dir = tempfile.mkdtemp()
+        video_path = os.path.join(temp_dir, "throw.mp4")
+
+        try:
+            video_file.save(video_path)
+            logger.info(f"Video saved to {video_path}")
+        except Exception as e:
+            logger.error(f"Error saving video: {str(e)}")
+            return jsonify({"error": f"Error saving video: {str(e)}"}), 500
+
+        # 1. Trajectory analysis (existing)
+        logger.info("Detecting disc trajectory...")
+        disc_positions = detect_disc(video_path)
+        trajectory_data = None
+
+        if disc_positions and len(disc_positions) >= 5:
+            trajectory_data = analyze_trajectory(disc_positions)
+            trajectory_feedback = generate_simple_feedback(trajectory_data)
+        else:
+            trajectory_data = {
+                "flight_path": "unknown",
+                "distance": 0,
+                "max_height": 0,
+                "release_angle": 0
+            }
+            trajectory_feedback = ["Unable to detect disc clearly."]
+
+        # 2. Pose analysis (new)
+        logger.info("Extracting pose landmarks...")
+        pose_extractor = MediaPipePoseExtractor(
+            min_detection_confidence=min_confidence,
+            sample_rate=2
+        )
+
+        poses = pose_extractor.extract_poses_from_video(video_path, max_frames=300)
+        keyframes = pose_extractor.get_keyframe_indices(poses)
+
+        pose_detected = len([p for p in poses if p.detected]) > 0
+        pose_metrics = None
+        pose_feedback = None
+
+        if pose_detected:
+            logger.info("Analyzing biomechanics...")
+            biomechanics_analyzer = BiomechanicsAnalyzer(handedness=handedness)
+            metrics = biomechanics_analyzer.analyze(poses, keyframes)
+            pose_metrics = metrics.to_dict()
+
+            logger.info("Generating pose feedback...")
+            feedback_generator = FeedbackGenerator(skill_level=skill_level)
+            feedback = feedback_generator.generate_feedback(metrics)
+            pose_feedback = feedback.to_dict()
+        else:
+            logger.warning("No pose detected in video")
+            pose_metrics = {
+                "reachback_depth_score": 0,
+                "hip_rotation_degrees": 0,
+                "shoulder_separation_degrees": 0,
+                "follow_through_score": 0,
+                "weight_shift_score": 0
+            }
+            pose_feedback = {
+                "pose_tips": ["Unable to detect body pose. Ensure full body is visible."],
+                "priority_focus": "visibility",
+                "strengths": [],
+                "overall_score": 0
+            }
+
+        # 3. Combine results
+        elapsed_time = time.time() - start_time
+        logger.info(f"Analysis complete in {elapsed_time:.2f}s")
+
+        result = {
+            "trajectory": {
+                "flightPath": trajectory_data["flight_path"],
+                "distance": float(trajectory_data["distance"]),
+                "maxHeight": float(trajectory_data["max_height"]),
+                "releaseAngle": float(trajectory_data["release_angle"]),
+                "techniqueFeedback": trajectory_feedback
+            },
+            "pose": {
+                "detected": pose_detected,
+                "metrics": pose_metrics,
+                "keyframes": keyframes
+            },
+            "feedback": pose_feedback,
+            "processingTimeMs": int(elapsed_time * 1000)
+        }
+
+        return jsonify(result)
+
+    except Exception as e:
+        error_msg = f"Error during pose analysis: {str(e)}"
+        stack_trace = traceback.format_exc()
+        logger.error(f"{error_msg}\n{stack_trace}")
+        return jsonify({
+            "error": error_msg,
+            "trajectory": {
+                "flightPath": "error",
+                "distance": 0,
+                "maxHeight": 0,
+                "releaseAngle": 0,
+                "techniqueFeedback": [f"Analysis error: {str(e)}"]
+            },
+            "pose": {
+                "detected": False,
+                "metrics": {},
+                "keyframes": {}
+            },
+            "feedback": {
+                "pose_tips": ["An error occurred during analysis."],
+                "priority_focus": "error",
+                "strengths": [],
+                "overall_score": 0
+            }
+        }), 500
+
+    finally:
+        # Clean up
+        if pose_extractor is not None:
+            try:
+                pose_extractor.close()
+            except Exception as e:
+                logger.error(f"Error closing pose extractor: {str(e)}")
+
+        try:
+            if video_path and os.path.exists(video_path):
+                os.remove(video_path)
+                logger.info(f"Removed temporary video file: {video_path}")
+            if temp_dir and os.path.exists(temp_dir):
+                os.rmdir(temp_dir)
+                logger.info(f"Removed temporary directory: {temp_dir}")
+        except Exception as e:
+            logger.error(f"Cleanup error: {str(e)}")
+
 
 if __name__ == '__main__':
     logger.info("Starting ML service on port 5001")

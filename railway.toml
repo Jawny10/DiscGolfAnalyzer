@@ -1,0 +1,12 @@
+# Railway configuration for the Java Spring Boot API service
+# This is the main backend service
+
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+healthcheckPath = "/api/throws/health"
+healthcheckTimeout = 30
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3

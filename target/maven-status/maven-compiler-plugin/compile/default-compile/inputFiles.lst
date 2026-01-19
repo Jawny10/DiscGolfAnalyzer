@@ -4,10 +4,11 @@
 /Users/johnathandriscoll/Downloads/discgolfanalyzer/src/main/java/com/discgolfanalyzer/config/SecurityConfig.java
 /Users/johnathandriscoll/Downloads/discgolfanalyzer/src/main/java/com/discgolfanalyzer/model/AppUser.java
 /Users/johnathandriscoll/Downloads/discgolfanalyzer/src/main/java/com/discgolfanalyzer/service/OpenAiVisionService.java
+/Users/johnathandriscoll/Downloads/discgolfanalyzer/src/main/java/com/discgolfanalyzer/config/RestTemplateConfig.java
 /Users/johnathandriscoll/Downloads/discgolfanalyzer/src/main/java/com/discgolfanalyzer/controller/ThrowAnalysisController.java
 /Users/johnathandriscoll/Downloads/discgolfanalyzer/src/main/java/com/discgolfanalyzer/DiscGolfAnalyzerApplication.java
 /Users/johnathandriscoll/Downloads/discgolfanalyzer/src/main/java/com/discgolfanalyzer/service/video/VideoProcessingService.java
 /Users/johnathandriscoll/Downloads/discgolfanalyzer/src/main/java/com/discgolfanalyzer/repository/UserRepository.java
 /Users/johnathandriscoll/Downloads/discgolfanalyzer/src/main/java/com/discgolfanalyzer/repository/ThrowAnalysisRepository.java
 /Users/johnathandriscoll/Downloads/discgolfanalyzer/src/main/java/com/discgolfanalyzer/dto/AnalysisResult.java
-/Users/johnathandriscoll/Downloads/discgolfanalyzer/src/main/java/com/discgolfanalyzer/config/AppConfig.java
+/Users/johnathandriscoll/Downloads/discgolfanalyzer/src/main/java/com/discgolfanalyzer/dto/AnalyzeRequest.java

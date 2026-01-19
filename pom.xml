@@ -1,18 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
-                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>com.discdive</groupId>
-  <artifactId>discgolfanalyzer</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
-  <packaging>jar</packaging>
-
-  <name>Disc Golf Throw Analyzer</name>
-  <description>Spring Boot application for analyzing disc golf throws with OpenAI Vision</description>
-
+  <!-- Spring Boot parent supplies versions for starters & plugins -->
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
@@ -20,56 +13,56 @@
     <relativePath/>
   </parent>
 
+  <groupId>com.discdive</groupId>
+  <artifactId>discgolfanalyzer</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <name>Disc Golf Throw Analyzer</name>
+  <description>Spring Boot app for analyzing disc golf throws</description>
+  <packaging>jar</packaging>
+
   <properties>
     <java.version>17</java.version>
-    <openai.java.version>0.22.0</openai.java.version> <!-- current release -->
+    <openai.java.version>4.1.0</openai.java.version>
   </properties>
 
   <dependencies>
-    <!-- Web/API -->
+    <!-- Spring Boot starters (versions come from the parent) -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-web</artifactId>
     </dependency>
 
-    <!-- Security -->
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-security</artifactId>
-    </dependency>
+    <!-- Lombok (generates getters/setters/constructors at compile time) -->
+  <dependency>
+   <groupId>org.projectlombok</groupId>
+   <artifactId>lombok</artifactId>
+   <version>1.18.32</version>
+   <scope>provided</scope>
+ </dependency>
 
-    <!-- JPA + Hibernate -->
+
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-data-jpa</artifactId>
     </dependency>
 
-    <!-- H2 DB -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+
+    <!-- H2 in-memory DB for dev (version managed by Boot parent) -->
     <dependency>
       <groupId>com.h2database</groupId>
       <artifactId>h2</artifactId>
       <scope>runtime</scope>
     </dependency>
 
-    <!-- OpenAI Java SDK -->
+    <!-- OpenAI Java SDK (explicit version because it's outside Boot BOM) -->
     <dependency>
       <groupId>com.openai</groupId>
       <artifactId>openai-java</artifactId>
       <version>${openai.java.version}</version>
-    </dependency>
-
-    <!-- Commons IO -->
-    <dependency>
-      <groupId>commons-io</groupId>
-      <artifactId>commons-io</artifactId>
-      <version>2.16.1</version>
-    </dependency>
-
-    <!-- Lombok -->
-    <dependency>
-      <groupId>org.projectlombok</groupId>
-      <artifactId>lombok</artifactId>
-      <optional>true</optional>
     </dependency>
 
     <!-- Tests -->
@@ -82,10 +75,24 @@
 
   <build>
     <plugins>
+      <!-- Version managed by the Boot parent -->
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
+        <configuration>
+          <mainClass>com.discgolfanalyzer.DiscGolfAnalyzerApplication</mainClass>
+        </configuration>
+      </plugin>
+
+      <!-- Optional: explicit compiler release -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <release>${java.version}</release>
+        </configuration>
       </plugin>
     </plugins>
   </build>
+
 </project>

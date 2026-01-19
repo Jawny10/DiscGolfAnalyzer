@@ -1,0 +1,33 @@
+# Python
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+venv/
+.venv/
+*_env/
+
+# IDE
+.idea
+.vscode
+
+# Data
+*.mp4
+*.mov
+*.mkv
+*.avi
+
+# Logs
+*.log
+
+# ML models
+*.pt
+*.pth
+*.onnx
+*.pkl
+
+# Docs
+*.md
+
+# OS
+.DS_Store
